@@ -15,11 +15,20 @@ class Config:
 	compiler: str = "cc"
 	flags: list[str | tuple[str]] = field(default_factory=list)
 	macros: dict[str, str] = field(default_factory=dict)
-	std_include: str | None = None
+	env: dict[str, str] = field(default_factory=dict)
+	includes: dict[str, str] = field(default_factory=dict)
 
 	def merge_macros(self, macros: dict[str, str]):
 		for k, v in macros.items():
 			self.macros[k] = v
+
+	def merge_env(self, env: dict[str, str]):
+		for k, v in env.items():
+			self.env[k] = v
+
+	def merge_includes(self, includes: dict[str, str]):
+		for k, v in includes.items():
+			self.includes[k] = v
 
 	def merge_flags(self, flags: list[str]):
 		self.flags += flags
@@ -33,7 +42,6 @@ class Config:
 		self.main_file = data.get("main_file", self.main_file)
 		self.out_binary = data.get("out_binary", self.out_binary)
 		self.compiler = data.get("compiler", self.compiler)
-		self.std_include = data.get("std_include", self.std_include)
 		self.tests_dir = data.get("tests_dir", self.tests_dir)
 		self.tests_suffix = data.get("tests_suffix", self.tests_suffix)
 		self.tests_sub = data.get("tests_sub", self.tests_sub)
@@ -49,6 +57,14 @@ class Config:
 		macros = data.get("macros")
 		if isinstance(macros, dict):
 			self.merge_macros(macros)
+
+		includes = data.get("includes")
+		if isinstance(includes, dict):
+			self.merge_includes(includes)
+
+		env = data.get("env")
+		if isinstance(env, dict):
+			self.merge_env(env)
 
 	def load(
 		self,
@@ -77,6 +93,8 @@ class Config:
 		for profile in (set(profiles) - found_profiles):
 			print(f"warning: profile \"{profile}\" not found in config files", file=sys.stderr)
 
+	def subenv(self, template: str) -> str:
+		return template
 
 	def make_flags(self) -> list[str]:
 		command = []
@@ -91,9 +109,10 @@ class Config:
 			if value == "":
 				command.append(f"-D{macro}")
 			else:
-				command.append(f"-D{macro}={value}")
+				command.append(f"-D{macro}={self.subenv(value)}")
 
-		if self.std_include is not None:
-			command += ["-I", self.std_include]
+		for name, value in self.includes.items():
+			if value != "":
+				command.append(f"-I{self.subenv(value)}")
 
 		return command
