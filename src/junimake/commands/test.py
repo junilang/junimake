@@ -108,8 +108,8 @@ def entry(argv: list[str]):
 
 		w.write_block(
 			"gen_test() {\n" +
-			f'\t"{config.compiler}" -E "$1" \\\n' +
-			f'\t\t| sed -e "s|{config.tests_sub}|{config.tests_sub}$2\\_|g"\n' +
+			f'\techo \\#line 1 \\""$1"\\" \n' +
+			f'\tsed -e "s|{config.tests_sub}|{config.tests_sub}$2\\_|g" "$1" \n' +
 			"}"
 		)
 
